@@ -35,12 +35,14 @@ import {
   type VillageService,
   type WebsiteSettings,
 } from "@/lib/website-data"
+import { getCitizens } from "@/lib/admin-desa-data"
 
 export default function WebsitePreview() {
   const [content, setContent] = useState<WebsiteContent[]>([])
   const [news, setNews] = useState<VillageNews[]>([])
   const [services, setServices] = useState<VillageService[]>([])
   const [settings, setSettings] = useState<WebsiteSettings | null>(null)
+  const [citizenCount, setCitizenCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<"desktop" | "tablet" | "mobile">("desktop")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -66,17 +68,19 @@ export default function WebsitePreview() {
   const loadWebsiteData = async (username: string) => {
     setLoading(true)
     try {
-      const [contentData, newsData, servicesData, settingsData] = await Promise.all([
+      const [contentData, newsData, servicesData, settingsData, citizensData] = await Promise.all([
         getWebsiteContent(username),
         getVillageNews(username),
         getVillageServices(username),
         getWebsiteSettings(username),
+        getCitizens(username),
       ])
 
       setContent(contentData)
       setNews(newsData)
       setServices(servicesData.filter((s) => s.is_active))
       setSettings(settingsData)
+      setCitizenCount(citizensData.length)
     } catch (error) {
       console.error("Error loading website data:", error)
       toast({
@@ -124,13 +128,12 @@ export default function WebsitePreview() {
   // Get published news count
   const publishedNews = news.filter((n) => n.status === "published")
 
-  // Mock population data (you can replace with real data from database)
+  // Real village stats from database
   const villageStats = {
-    population: 1234,
-    households: 456,
-    area: "500 Ha",
+    population: citizenCount,
     services: services.length,
     news: publishedNews.length,
+    online: "24/7",
   }
 
   if (loading) {
@@ -237,16 +240,15 @@ export default function WebsitePreview() {
                     variant="secondary"
                     size="sm"
                     onClick={() => scrollToSection(contactRef)}
-                    className="hover:bg-white/90"
+                    className="bg-white text-gray-900 hover:bg-gray-100 font-medium"
                   >
                     <Phone className="mr-2 h-4 w-4" />
                     <span className="hidden sm:inline">Kontak</span>
                   </Button>
                   <Button
-                    variant="outline"
                     size="sm"
                     onClick={() => scrollToSection(servicesRef)}
-                    className="text-white border-white hover:bg-white hover:text-gray-900"
+                    className="bg-white text-gray-900 hover:bg-gray-100 border-2 border-white font-medium"
                   >
                     <FileText className="mr-2 h-4 w-4" />
                     <span className="hidden sm:inline">Layanan</span>
@@ -313,7 +315,7 @@ export default function WebsitePreview() {
                     "Melayani dengan sepenuh hati untuk kemajuan desa"}
                 </p>
                 <Button
-                  className="bg-white text-gray-900 hover:bg-gray-100 font-semibold"
+                  className="bg-white text-gray-900 hover:bg-gray-100 font-semibold shadow-lg"
                   onClick={() => scrollToSection(servicesRef)}
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
@@ -328,7 +330,7 @@ export default function WebsitePreview() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="text-center">
                 <div className="text-xl sm:text-2xl font-bold text-green-600">
-                  {villageStats.population.toLocaleString()}
+                  {villageStats.population.toLocaleString("id-ID")}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600">Penduduk</div>
               </div>
@@ -341,7 +343,7 @@ export default function WebsitePreview() {
                 <div className="text-xs sm:text-sm text-gray-600">Berita</div>
               </div>
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-orange-600">24/7</div>
+                <div className="text-xl sm:text-2xl font-bold text-orange-600">{villageStats.online}</div>
                 <div className="text-xs sm:text-sm text-gray-600">Online</div>
               </div>
             </div>
@@ -556,7 +558,8 @@ export default function WebsitePreview() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-center sm:text-left">
               <p className="text-sm text-gray-600">
-                Preview ini menampilkan tampilan website desa berdasarkan konten yang telah Anda kelola.
+                Preview ini menampilkan data real dari database: <strong>{villageStats.population} penduduk</strong>,{" "}
+                <strong>{villageStats.services} layanan</strong>, dan <strong>{villageStats.news} berita</strong>.
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 Semua navigasi dan tombol sudah berfungsi dengan smooth scrolling.
