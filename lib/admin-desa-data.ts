@@ -2,39 +2,62 @@ import { supabase } from "./supabase"
 
 export async function getVillageInfo(adminUsername: string) {
   try {
-    // Get admin user
+    console.log("🔍 Getting village info for admin:", adminUsername)
+
+    // Get admin user with village info
     const { data: admin, error: adminError } = await supabase
       .from("users")
-      .select("id")
+      .select(`
+        id,
+        username,
+        village_id,
+        villages (
+          id,
+          nama,
+          kecamatan,
+          kabupaten,
+          provinsi,
+          status
+        )
+      `)
       .eq("username", adminUsername)
       .single()
 
-    if (adminError || !admin) {
+    if (adminError) {
+      console.error("❌ Admin query error:", adminError)
+      throw new Error(`Admin not found: ${adminError.message}`)
+    }
+
+    if (!admin) {
+      console.error("❌ Admin not found")
       throw new Error("Admin not found")
     }
 
-    // Get village info
-    const { data: village, error: villageError } = await supabase
-      .from("villages")
-      .select("*")
-      .eq("admin_id", admin.id)
-      .single()
-
-    if (villageError) {
-      throw new Error("Village not found")
+    if (!admin.village_id) {
+      console.error("❌ Admin has no village_id")
+      throw new Error("Admin not assigned to any village")
     }
 
-    return village
+    if (!admin.villages) {
+      console.error("❌ Village data not found for village_id:", admin.village_id)
+      throw new Error("Village data not found")
+    }
+
+    console.log("✅ Village info found:", admin.villages.nama)
+    return admin.villages
   } catch (error) {
-    console.error("Error getting village info:", error)
+    console.error("💥 Error getting village info:", error)
     return null
   }
 }
 
 export async function getVillageStats(adminUsername: string) {
   try {
+    console.log("🔍 Getting village stats for admin:", adminUsername)
+
     const villageInfo = await getVillageInfo(adminUsername)
     if (!villageInfo) {
+      console.error("❌ No village info found")
       return {
         totalCitizens: 0,
         totalLetters: 0,
@@ -45,28 +68,38 @@ export async function getVillageStats(adminUsername: string) {
       }
     }
 
+    console.log("📊 Getting stats for village:", villageInfo.nama, "ID:", villageInfo.id)
+
     // Get citizens count
-    const { count: citizensCount } = await supabase
+    const { count: citizensCount, error: citizensError } = await supabase
       .from("citizens")
       .select("*", { count: "exact", head: true })
       .eq("village_id", villageInfo.id)
 
+    if (citizensError) {
+      console.error("❌ Citizens count error:", citizensError)
+    }
+
     // Get letters stats
-    const { data: letters } = await supabase
+    const { data: letters, error: lettersError } = await supabase
       .from("letter_requests")
       .select("status, created_at")
       .eq("village_id", villageInfo.id)
 
+    if (lettersError) {
+      console.error("❌ Letters query error:", lettersError)
+    }
+
     const totalLetters = letters?.length || 0
     const pendingLetters = letters?.filter((l) => l.status === "pending").length || 0
-    const approvedLetters = letters?.filter((l) => l.status === "approved").length || 0
-    const rejectedLetters = letters?.filter((l) => l.status === "rejected").length || 0
+    const approvedLetters = letters?.filter((l) => l.status === "selesai").length || 0
+    const rejectedLetters = letters?.filter((l) => l.status === "ditolak").length || 0
 
     // This month letters
     const currentMonth = new Date().toISOString().slice(0, 7)
     const thisMonthLetters = letters?.filter((l) => l.created_at.startsWith(currentMonth)).length || 0
 
-    return {
+    const stats = {
       totalCitizens: citizensCount || 0,
       totalLetters,
       pendingLetters,
@@ -74,8 +107,11 @@ export async function getVillageStats(adminUsername: string) {
       rejectedLetters,
       thisMonthLetters,
     }
+
+    console.log("✅ Village stats:", stats)
+    return stats
   } catch (error) {
-    console.error("Error getting village stats:", error)
+    console.error("💥 Error getting village stats:", error)
     return {
       totalCitizens: 0,
       totalLetters: 0,
@@ -89,35 +125,53 @@ export async function getVillageStats(adminUsername: string) {
 
 export async function getRecentLetterRequests(adminUsername: string, limit = 5) {
   try {
+    console.log("🔍 Getting recent letters for admin:", adminUsername)
+
     const villageInfo = await getVillageInfo(adminUsername)
-    if (!villageInfo) return []
+    if (!villageInfo) {
+      console.error("❌ No village info for recent letters")
+      return []
+    }
+
+    console.log("📋 Getting recent letters for village:", villageInfo.nama)
 
     const { data: letters, error } = await supabase
       .from("letter_requests")
       .select(`
         *,
-        citizen:citizens(nama, nik)
+        citizens (
+          nama,
+          nik
+        )
       `)
       .eq("village_id", villageInfo.id)
       .order("created_at", { ascending: false })
       .limit(limit)
 
     if (error) {
-      console.error("Error fetching recent letters:", error)
+      console.error("❌ Recent letters error:", error)
       return []
     }
 
+    console.log("✅ Found recent letters:", letters?.length || 0)
     return letters || []
   } catch (error) {
-    console.error("Error getting recent letter requests:", error)
+    console.error("💥 Error getting recent letter requests:", error)
     return []
   }
 }
 
 export async function getCitizens(adminUsername: string) {
   try {
+    console.log("🔍 Getting citizens for admin:", adminUsername)
+
     const villageInfo = await getVillageInfo(adminUsername)
-    if (!villageInfo) return []
+    if (!villageInfo) {
+      console.error("❌ No village info for citizens")
+      return []
+    }
+
+    console.log("👥 Getting citizens for village:", villageInfo.nama)
 
     const { data: citizens, error } = await supabase
       .from("citizens")
@@ -126,23 +180,28 @@ export async function getCitizens(adminUsername: string) {
       .order("nama", { ascending: true })
 
     if (error) {
-      console.error("Error fetching citizens:", error)
+      console.error("❌ Citizens query error:", error)
       return []
     }
 
+    console.log("✅ Found citizens:", citizens?.length || 0)
     return citizens || []
   } catch (error) {
-    console.error("Error getting citizens:", error)
+    console.error("💥 Error getting citizens:", error)
     return []
   }
 }
 
 export async function addCitizen(adminUsername: string, citizenData: any) {
   try {
+    console.log("🔍 Adding citizen for admin:", adminUsername)
+
     const villageInfo = await getVillageInfo(adminUsername)
     if (!villageInfo) {
       throw new Error("Village not found")
     }
+
+    console.log("➕ Adding citizen to village:", villageInfo.nama)
 
     const { data, error } = await supabase
       .from("citizens")
@@ -154,18 +213,22 @@ export async function addCitizen(adminUsername: string, citizenData: any) {
       .single()
 
     if (error) {
+      console.error("❌ Add citizen error:", error)
       throw new Error(error.message)
     }
 
+    console.log("✅ Citizen added successfully:", data.nama)
     return data
   } catch (error) {
-    console.error("Error adding citizen:", error)
+    console.error("💥 Error adding citizen:", error)
     throw error
   }
 }
 
 export async function updateCitizen(citizenId: number, updates: any) {
   try {
+    console.log("🔄 Updating citizen:", citizenId)
+
     const { data, error } = await supabase
       .from("citizens")
       .update({
@@ -177,33 +240,41 @@ export async function updateCitizen(citizenId: number, updates: any) {
       .single()
 
     if (error) {
+      console.error("❌ Update citizen error:", error)
       throw new Error(error.message)
     }
 
+    console.log("✅ Citizen updated successfully")
     return data
   } catch (error) {
-    console.error("Error updating citizen:", error)
+    console.error("💥 Error updating citizen:", error)
     throw error
   }
 }
 
 export async function deleteCitizen(citizenId: number) {
   try {
+    console.log("🗑️ Deleting citizen:", citizenId)
+
     const { error } = await supabase.from("citizens").delete().eq("id", citizenId)
 
     if (error) {
+      console.error("❌ Delete citizen error:", error)
       throw new Error(error.message)
     }
 
+    console.log("✅ Citizen deleted successfully")
     return true
   } catch (error) {
-    console.error("Error deleting citizen:", error)
+    console.error("💥 Error deleting citizen:", error)
     throw error
   }
 }
 
 export async function importCitizensFromCSV(adminUsername: string, file: File) {
   try {
+    console.log("📁 Importing citizens from CSV for admin:", adminUsername)
+
     const villageInfo = await getVillageInfo(adminUsername)
     if (!villageInfo) {
       throw new Error("Village not found")
@@ -295,16 +366,17 @@ export async function importCitizensFromCSV(adminUsername: string, file: File) {
       const { error } = await supabase.from("citizens").insert(batch)
 
       if (error) {
-        console.error("Batch insert error:", error)
+        console.error("❌ Batch insert error:", error)
         throw new Error(`Gagal mengimport batch data: ${error.message}`)
       }
 
       imported += batch.length
     }
 
+    console.log("✅ CSV import successful:", imported, "records")
     return { imported, total: dataToInsert.length }
   } catch (error) {
-    console.error("Error importing CSV:", error)
+    console.error("💥 Error importing CSV:", error)
     throw error
   }
 }
