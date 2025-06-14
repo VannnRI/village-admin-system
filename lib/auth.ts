@@ -1,138 +1,94 @@
 import { supabase } from "./supabase"
 
-export interface AuthUser {
+export interface User {
   id: number
   username: string
   email: string
   role: "super_admin" | "admin_desa" | "perangkat_desa" | "masyarakat"
-  village_id?: number | null
-  citizen_details?: {
-    id: number
-    nama: string
-    nik: string
-    alamat: string
-    no_telepon?: string
-    tanggal_lahir: string
-    village_id: number
-  }
+  village_id?: number
+  village_name?: string
 }
 
-export async function login(credentials: { username: string; password: string }): Promise<AuthUser | null> {
+export async function login(username: string, password: string): Promise<User | null> {
   try {
-    console.log("🔐 Attempting login for username:", credentials.username)
+    // For admin users (username/password login)
+    if (!username.match(/^\d{16}$/)) {
+      const { data: users, error } = await supabase
+        .from("users")
+        .select(`
+          id,
+          username,
+          email,
+          role,
+          villages!villages_admin_id_fkey(id, nama)
+        `)
+        .eq("username", username)
+        .eq("password_hash", password) // Using password_hash from your database
+        .single()
 
-    // Query users with password_hash (based on your database structure)
-    const { data: users, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("username", credentials.username)
-      .eq("status", "aktif")
+      if (error || !users) {
+        console.error("Login error:", error)
+        return null
+      }
 
-    if (error) {
-      console.error("❌ Database error during login:", error)
-      throw new Error("Database error")
+      return {
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        role: users.role,
+        village_id: users.villages?.id,
+        village_name: users.villages?.nama,
+      }
     }
 
-    if (!users || users.length === 0) {
-      console.log("❌ User not found:", credentials.username)
-      throw new Error("User not found")
-    }
-
-    const user = users[0]
-    console.log("✅ User found:", user.username, "Role:", user.role)
-
-    // For demo purposes, accept 'admin' as password for all accounts
-    // In production, you should use bcrypt to compare with password_hash
-    if (credentials.password !== "admin") {
-      console.log("❌ Invalid password for user:", credentials.username)
-      throw new Error("Invalid password")
-    }
-
-    console.log("✅ Password verified for user:", credentials.username)
-
-    // Get village_id for admin_desa users
-    let village_id = null
-    if (user.role === "admin_desa") {
-      const { data: village } = await supabase.from("villages").select("id").eq("admin_id", user.id).single()
-
-      village_id = village?.id || null
-      console.log("✅ Village ID for admin:", village_id)
-    }
-
-    const authUser: AuthUser = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      village_id: village_id,
-    }
-
-    console.log("✅ Login successful:", authUser)
-    return authUser
-  } catch (error) {
-    console.error("❌ Login error:", error)
-    return null
-  }
-}
-
-export async function loginCitizen(credentials: { nik: string; tanggal_lahir: string }): Promise<AuthUser | null> {
-  try {
-    console.log("🔐 Attempting citizen login for NIK:", credentials.nik)
-
-    const { data: citizens, error } = await supabase
+    // For citizen login (NIK/birth date)
+    const { data: citizen, error } = await supabase
       .from("citizens")
-      .select("*")
-      .eq("nik", credentials.nik)
-      .eq("tanggal_lahir", credentials.tanggal_lahir)
+      .select(`
+        id,
+        nik,
+        nama,
+        tanggal_lahir,
+        villages!citizens_village_id_fkey(id, nama)
+      `)
+      .eq("nik", username)
+      .eq("tanggal_lahir", password)
+      .single()
 
-    if (error) {
-      console.error("❌ Database error during citizen login:", error)
-      throw new Error("Database error")
+    if (error || !citizen) {
+      console.error("Citizen login error:", error)
+      return null
     }
 
-    if (!citizens || citizens.length === 0) {
-      console.log("❌ Citizen not found with NIK:", credentials.nik)
-      throw new Error("Citizen not found")
-    }
-
-    const citizen = citizens[0]
-    console.log("✅ Citizen found:", citizen.nama, "NIK:", citizen.nik)
-
-    const authUser: AuthUser = {
+    return {
       id: citizen.id,
-      username: citizen.nik, // Use NIK as username for citizens
-      email: `${citizen.nik}@citizen.local`, // Dummy email
+      username: citizen.nik,
+      email: `${citizen.nik}@citizen.local`,
       role: "masyarakat",
-      village_id: citizen.village_id,
-      citizen_details: citizen,
+      village_id: citizen.villages.id,
+      village_name: citizen.villages.nama,
     }
-
-    console.log("✅ Citizen login successful:", authUser)
-    return authUser
   } catch (error) {
-    console.error("❌ Citizen login error:", error)
+    console.error("Login error:", error)
     return null
   }
 }
 
-export function logout(): void {
-  localStorage.removeItem("user")
-  window.location.href = "/"
-}
+export async function getCurrentUser(): Promise<User | null> {
+  if (typeof window === "undefined") return null
 
-export function getCurrentUser(): AuthUser | null {
+  const userStr = localStorage.getItem("currentUser")
+  if (!userStr) return null
+
   try {
-    const userData = localStorage.getItem("user")
-    if (!userData) return null
-
-    const user = JSON.parse(userData)
-    return user
-  } catch (error) {
-    console.error("Error getting current user:", error)
+    return JSON.parse(userStr)
+  } catch {
     return null
   }
 }
 
-export function saveUserSession(user: AuthUser): void {
-  localStorage.setItem("user", JSON.stringify(user))
+export async function logout(): Promise<void> {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("currentUser")
+  }
 }
