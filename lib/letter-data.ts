@@ -144,6 +144,75 @@ export async function updateLetterStatus(
   }
 }
 
+export async function generateLetterNumber(jenisSurat: string, adminUsername: string): Promise<string | null> {
+  try {
+    console.log("🔢 Generating letter number for:", jenisSurat)
+
+    const villageInfo = await getVillageInfo(adminUsername)
+    if (!villageInfo) {
+      console.error("❌ Village not found for admin:", adminUsername)
+      return null
+    }
+
+    // Get current year and month
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, "0")
+
+    // Try to count approved letters this month
+    let count = 0
+    try {
+      const { data, error } = await supabase
+        .from("letter_requests")
+        .select("*")
+        .eq("village_id", villageInfo.id)
+        .eq("status", "approved")
+
+      if (error) {
+        console.error("❌ Error counting letters:", error)
+      } else {
+        // Filter by letter type and this month (if date columns exist)
+        const filteredData =
+          data?.filter((item) => {
+            const letterType = item.jenis_surat || item.letter_type || ""
+            return letterType === jenisSurat
+          }) || []
+
+        count = filteredData.length
+      }
+    } catch (countError) {
+      console.error("❌ Error in count query:", countError)
+    }
+
+    const sequence = String(count + 1).padStart(3, "0")
+
+    // Generate letter number based on type
+    let prefix = ""
+    if (jenisSurat.includes("Domisili")) {
+      prefix = "SKD"
+    } else if (jenisSurat.includes("Usaha")) {
+      prefix = "SKU"
+    } else if (jenisSurat.includes("Tidak Mampu")) {
+      prefix = "SKTM"
+    } else if (jenisSurat.includes("Nikah")) {
+      prefix = "SPN"
+    } else if (jenisSurat.includes("Kelahiran")) {
+      prefix = "SKL"
+    } else if (jenisSurat.includes("Kematian")) {
+      prefix = "SKM"
+    } else {
+      prefix = "SK"
+    }
+
+    const letterNumber = `${prefix}/${sequence}/${month}/${year}`
+    console.log("✅ Generated letter number:", letterNumber)
+    return letterNumber
+  } catch (error) {
+    console.error("❌ Error generating letter number:", error)
+    return null
+  }
+}
+
 export async function getLetterStats(villageId: number) {
   try {
     console.log("📊 Fetching letter statistics for village:", villageId)
@@ -183,7 +252,7 @@ export async function getLetterStats(villageId: number) {
 // Helper function to get display value from letter request
 export function getLetterDisplayValue(letter: LetterRequest, field: string): string {
   // Try different possible column names
-  const possibleNames = {
+  const possibleNames: { [key: string]: string[] } = {
     jenis_surat: ["jenis_surat", "letter_type", "type"],
     keperluan: ["keperluan", "purpose", "tujuan_permohonan"],
     tanggal: ["tanggal_pengajuan", "request_date", "created_at"],
