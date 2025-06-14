@@ -72,12 +72,3 @@ export interface LetterRequest {
   created_at: string
   updated_at: string
 }
-
-export interface ActivityLog {
-  id: number
-  user_id?: number
-  action: string
-  details?: string
-  ip_address?: string
-  created_at: string
-}

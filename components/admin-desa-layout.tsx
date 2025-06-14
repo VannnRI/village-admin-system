@@ -4,10 +4,10 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Home, Users, FileText, Globe, Settings, LogOut, Menu, Building2, BarChart3, Archive } from "lucide-react"
+import { LayoutDashboard, Users, FileText, Archive, BarChart3, Globe, LogOut, Menu, User } from "lucide-react"
+import Link from "next/link"
 
 interface AdminDesaLayoutProps {
   children: React.ReactNode
@@ -15,17 +15,19 @@ interface AdminDesaLayoutProps {
 
 export default function AdminDesaLayout({ children }: AdminDesaLayoutProps) {
   const [user, setUser] = useState<any>(null)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
     if (userData) {
       const parsedUser = JSON.parse(userData)
-      if (parsedUser.role !== "admin_desa") {
-        router.push("/")
-        return
-      }
       setUser(parsedUser)
+
+      // Check if user has admin_desa or perangkat_desa role
+      if (!["admin_desa", "perangkat_desa"].includes(parsedUser.role)) {
+        router.push("/")
+      }
     } else {
       router.push("/")
     }
@@ -36,101 +38,116 @@ export default function AdminDesaLayout({ children }: AdminDesaLayoutProps) {
     router.push("/")
   }
 
-  const navigation = [
-    { name: "Dashboard", href: "/admin-desa/dashboard", icon: Home, shortName: "Home" },
-    { name: "Data Warga", href: "/admin-desa/citizens", icon: Users, shortName: "Warga" },
-    { name: "Surat Menyurat", href: "/admin-desa/letters", icon: FileText, shortName: "Surat" },
-    { name: "Arsip", href: "/admin-desa/archives", icon: Archive, shortName: "Arsip" },
-    { name: "Website Desa", href: "/admin-desa/website", icon: Globe, shortName: "Website" },
-    { name: "Laporan", href: "/admin-desa/reports", icon: BarChart3, shortName: "Laporan" },
-    { name: "Pengaturan", href: "/admin-desa/settings", icon: Settings, shortName: "Setting" },
+  const menuItems = [
+    {
+      href: "/admin-desa/dashboard",
+      icon: LayoutDashboard,
+      label: "Dashboard",
+    },
+    {
+      href: "/admin-desa/citizens",
+      icon: Users,
+      label: "Data Warga",
+    },
+    {
+      href: "/admin-desa/letters",
+      icon: FileText,
+      label: "Kelola Surat",
+    },
+    {
+      href: "/admin-desa/archives",
+      icon: Archive,
+      label: "Arsip",
+    },
+    {
+      href: "/admin-desa/reports",
+      icon: BarChart3,
+      label: "Laporan",
+    },
+    {
+      href: "/admin-desa/website",
+      icon: Globe,
+      label: "Website Desa",
+    },
   ]
 
+  const Sidebar = ({ className = "" }: { className?: string }) => (
+    <div className={`bg-white border-r border-gray-200 ${className}`}>
+      <div className="p-6">
+        <h2 className="text-xl font-bold text-gray-900">Admin Desa</h2>
+        <p className="text-sm text-gray-600 mt-1">Sistem Administrasi Desa</p>
+      </div>
+
+      <nav className="px-4 space-y-2">
+        {menuItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <item.icon className="h-5 w-5" />
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+            <User className="h-4 w-4 text-green-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">{user?.username}</p>
+            <p className="text-xs text-gray-500 truncate">{user?.role}</p>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" onClick={handleLogout} className="w-full">
+          <LogOut className="h-4 w-4 mr-2" />
+          Logout
+        </Button>
+      </div>
+    </div>
+  )
+
   if (!user) {
-    return <div>Loading...</div>
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Desktop Sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
-          <div className="flex items-center flex-shrink-0 px-4">
-            <Building2 className="h-8 w-8 text-green-600" />
-            <span className="ml-2 text-xl font-bold text-gray-900">Admin Desa</span>
-          </div>
-          <div className="mt-5 flex-grow flex flex-col">
-            <nav className="flex-1 px-2 space-y-1">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                >
-                  <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                  <span className="hidden lg:block">{item.name}</span>
-                  <span className="lg:hidden">{item.shortName}</span>
-                </Link>
-              ))}
-            </nav>
-          </div>
-          <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-            <div className="flex items-center">
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-700">{user.username}</p>
-                <p className="text-xs text-gray-500">Administrator Desa</p>
-              </div>
-            </div>
-          </div>
+      <div className="hidden lg:block fixed inset-y-0 left-0 w-64">
+        <Sidebar />
+      </div>
+
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-gray-900">Admin Desa</h1>
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Menu className="h-4 w-4" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-64">
+              <Sidebar />
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
 
-      {/* Mobile menu */}
-      <div className="lg:hidden">
-        <div className="flex items-center justify-between bg-white border-b border-gray-200 px-4 py-2">
-          <div className="flex items-center">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <Menu className="h-6 w-6" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-64">
-                <div className="flex items-center mb-6">
-                  <Building2 className="h-8 w-8 text-green-600" />
-                  <span className="ml-2 text-xl font-bold text-gray-900">Admin Desa</span>
-                </div>
-                <nav className="space-y-1">
-                  {navigation.map((item) => (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    >
-                      <item.icon className="mr-3 h-5 w-5" />
-                      {item.name}
-                    </Link>
-                  ))}
-                </nav>
-              </SheetContent>
-            </Sheet>
-            <h1 className="ml-2 text-lg font-semibold text-gray-900">Admin Desa</h1>
-          </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="lg:pl-64 flex flex-col flex-1">
-        <div className="hidden lg:flex lg:items-center lg:justify-end lg:h-16 lg:bg-white lg:border-b lg:border-gray-200 lg:px-6">
-          <Button variant="ghost" onClick={handleLogout} className="text-gray-500 hover:text-gray-700">
-            <LogOut className="mr-2 h-4 w-4" />
-            Keluar
-          </Button>
-        </div>
-        <main className="flex-1 p-3 sm:p-4 lg:p-6">{children}</main>
+      {/* Main Content */}
+      <div className="lg:pl-64">
+        <main className="p-4 lg:p-8">{children}</main>
       </div>
     </div>
   )

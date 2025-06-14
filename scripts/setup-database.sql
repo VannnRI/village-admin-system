@@ -1,12 +1,3 @@
--- =====================================================
--- VILLAGE ADMINISTRATION SYSTEM - DATABASE SETUP
--- =====================================================
--- Run this script in Supabase SQL Editor
--- =====================================================
-
--- First, let's check if we can connect
-SELECT 'Database connection test' as status, now() as timestamp;
-
 -- Drop existing tables if they exist (for clean setup)
 DROP TABLE IF EXISTS activity_logs CASCADE;
 DROP TABLE IF EXISTS letter_requests CASCADE;
@@ -16,11 +7,7 @@ DROP TABLE IF EXISTS villages CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS system_settings CASCADE;
 
--- =====================================================
--- CREATE TABLES
--- =====================================================
-
--- 1. Users table (for all user types)
+-- Create users table
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
@@ -32,7 +19,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Villages table
+-- Create villages table
 CREATE TABLE villages (
     id SERIAL PRIMARY KEY,
     nama VARCHAR(100) NOT NULL,
@@ -46,7 +33,7 @@ CREATE TABLE villages (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Village staff table
+-- Create village_staff table
 CREATE TABLE village_staff (
     id SERIAL PRIMARY KEY,
     village_id INTEGER REFERENCES villages(id) ON DELETE CASCADE,
@@ -56,7 +43,7 @@ CREATE TABLE village_staff (
     UNIQUE(village_id, user_id)
 );
 
--- 4. Citizens table
+-- Create citizens table
 CREATE TABLE citizens (
     id SERIAL PRIMARY KEY,
     village_id INTEGER REFERENCES villages(id),
@@ -70,7 +57,7 @@ CREATE TABLE citizens (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. Letter requests table
+-- Create letter_requests table
 CREATE TABLE letter_requests (
     id SERIAL PRIMARY KEY,
     village_id INTEGER REFERENCES villages(id),
@@ -87,7 +74,7 @@ CREATE TABLE letter_requests (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. Activity logs table
+-- Create activity_logs table
 CREATE TABLE activity_logs (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
@@ -97,7 +84,7 @@ CREATE TABLE activity_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 7. System settings table
+-- Create system_settings table
 CREATE TABLE system_settings (
     id SERIAL PRIMARY KEY,
     setting_key VARCHAR(100) UNIQUE NOT NULL,
@@ -107,43 +94,22 @@ CREATE TABLE system_settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- DISABLE ROW LEVEL SECURITY (RLS)
--- =====================================================
-ALTER TABLE users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE villages DISABLE ROW LEVEL SECURITY;
-ALTER TABLE village_staff DISABLE ROW LEVEL SECURITY;
-ALTER TABLE citizens DISABLE ROW LEVEL SECURITY;
-ALTER TABLE letter_requests DISABLE ROW LEVEL SECURITY;
-ALTER TABLE activity_logs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE system_settings DISABLE ROW LEVEL SECURITY;
-
--- =====================================================
--- INSERT INITIAL DATA
--- =====================================================
-
--- Insert users (password hash for 'admin')
+-- Insert initial users (password hash for 'admin')
 INSERT INTO users (username, email, password_hash, role, status) VALUES 
 ('admin', 'admin@system.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'super_admin', 'aktif'),
 ('admin_sukamaju', 'admin@sukamaju.desa.id', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin_desa', 'aktif'),
 ('perangkat_sukamaju', 'perangkat@sukamaju.desa.id', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'perangkat_desa', 'aktif'),
-('admin_makmur', 'admin@makmur.desa.id', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin_desa', 'aktif'),
-('perangkat_makmur1', 'perangkat1@makmur.desa.id', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'perangkat_desa', 'aktif');
+('admin_makmur', 'admin@makmur.desa.id', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin_desa', 'aktif');
 
 -- Insert villages
-INSERT INTO villages (nama, kode_pos, kecamatan, kabupaten, provinsi) VALUES 
-('Sukamaju', '12345', 'Sukamaju', 'Bogor', 'Jawa Barat'),
-('Makmur', '12346', 'Makmur', 'Bandung', 'Jawa Barat'),
-('Sejahtera', '12347', 'Sejahtera', 'Jakarta', 'DKI Jakarta');
-
--- Update villages with admin_id
-UPDATE villages SET admin_id = (SELECT id FROM users WHERE username = 'admin_sukamaju') WHERE nama = 'Sukamaju';
-UPDATE villages SET admin_id = (SELECT id FROM users WHERE username = 'admin_makmur') WHERE nama = 'Makmur';
+INSERT INTO villages (nama, kode_pos, kecamatan, kabupaten, provinsi, admin_id) VALUES 
+('Sukamaju', '12345', 'Sukamaju', 'Bogor', 'Jawa Barat', (SELECT id FROM users WHERE username = 'admin_sukamaju')),
+('Makmur', '12346', 'Makmur', 'Bandung', 'Jawa Barat', (SELECT id FROM users WHERE username = 'admin_makmur')),
+('Sejahtera', '12347', 'Sejahtera', 'Jakarta', 'DKI Jakarta', NULL);
 
 -- Insert village staff
 INSERT INTO village_staff (village_id, user_id, position) VALUES 
-((SELECT id FROM villages WHERE nama = 'Sukamaju'), (SELECT id FROM users WHERE username = 'perangkat_sukamaju'), 'Sekretaris Desa'),
-((SELECT id FROM villages WHERE nama = 'Makmur'), (SELECT id FROM users WHERE username = 'perangkat_makmur1'), 'Sekretaris Desa');
+((SELECT id FROM villages WHERE nama = 'Sukamaju'), (SELECT id FROM users WHERE username = 'perangkat_sukamaju'), 'Sekretaris Desa');
 
 -- Insert sample citizens
 INSERT INTO citizens (village_id, nik, no_kk, nama, tanggal_lahir, alamat, no_telepon) VALUES 
@@ -167,56 +133,3 @@ INSERT INTO system_settings (setting_key, setting_value, setting_type, descripti
 -- Insert initial activity log
 INSERT INTO activity_logs (user_id, action, details) VALUES 
 ((SELECT id FROM users WHERE username = 'admin'), 'System initialized', 'Database tables created and initial data inserted');
-
--- =====================================================
--- VERIFICATION QUERIES
--- =====================================================
-
--- Show all created tables
-SELECT 
-    schemaname,
-    tablename,
-    tableowner
-FROM pg_tables 
-WHERE schemaname = 'public'
-ORDER BY tablename;
-
--- Show row counts for each table
-SELECT 'users' as table_name, COUNT(*) as row_count FROM users
-UNION ALL
-SELECT 'villages' as table_name, COUNT(*) as row_count FROM villages
-UNION ALL
-SELECT 'citizens' as table_name, COUNT(*) as row_count FROM citizens
-UNION ALL
-SELECT 'letter_requests' as table_name, COUNT(*) as row_count FROM letter_requests
-UNION ALL
-SELECT 'activity_logs' as table_name, COUNT(*) as row_count FROM activity_logs
-UNION ALL
-SELECT 'village_staff' as table_name, COUNT(*) as row_count FROM village_staff
-UNION ALL
-SELECT 'system_settings' as table_name, COUNT(*) as row_count FROM system_settings;
-
--- Test login accounts
-SELECT 
-    username, 
-    role, 
-    status,
-    'Password: admin' as note
-FROM users 
-WHERE role != 'masyarakat'
-ORDER BY role, username;
-
--- Test citizen login
-SELECT 
-    nik,
-    nama,
-    tanggal_lahir,
-    'Use NIK as username, birth date as password' as note
-FROM citizens
-ORDER BY nama;
-
--- Final success message
-SELECT 
-    '✅ DATABASE SETUP COMPLETE!' as status,
-    'You can now login to the application' as message,
-    now() as completed_at;
