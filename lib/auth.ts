@@ -1,4 +1,4 @@
-import { supabase, type Citizen } from "./supabase" // Added Citizen type
+import { supabase, type Citizen } from "./supabase"
 import type { User } from "./supabase"
 
 export interface LoginCredentials {
@@ -7,50 +7,62 @@ export interface LoginCredentials {
 }
 
 export interface AuthUser {
-  id: number // Can be user.id or citizen.id
-  username: string // user.username or citizen.nik
-  email?: string // user.email or constructed for citizen
-  role: User["role"] // Use the updated role type
+  id: number
+  username: string
+  email?: string
+  role: User["role"]
   status: string
-  village_id?: number // Add village_id if user is admin_desa or perangkat_desa
-  citizen_details?: Citizen // Store full citizen details on citizen login
+  village_id?: number | null // village_id bisa null untuk super_admin
+  citizen_details?: Citizen
 }
 
 export async function login(credentials: LoginCredentials): Promise<AuthUser | null> {
   try {
-    console.log("🔍 Attempting login with:", credentials.username)
+    console.log("Attempting login for:", credentials.username)
 
     const { data: user, error } = await supabase.from("users").select("*").eq("username", credentials.username).single()
 
     if (error) {
-      console.error("❌ User query error:", error)
+      console.error("Supabase user query error:", error)
       if (error.code === "PGRST116") {
-        console.log("❌ User not found")
+        // "PGRST116" means no rows found
+        console.log("User not found:", credentials.username)
         return null
       }
-      throw new Error(`Database error: ${error.message}`)
+      // For other errors, it's a more generic database issue
+      throw new Error(`Database error: ${error.message}. Pastikan tabel 'users' ada dan bisa diakses.`)
     }
 
     if (!user) {
-      console.log("❌ No user data returned")
+      console.log("No user data returned for:", credentials.username)
       return null
     }
 
-    console.log("👤 User found:", user.username, user.role, user.status)
+    console.log(
+      "User found in DB:",
+      user.username,
+      "Role:",
+      user.role,
+      "Status:",
+      user.status,
+      "DB Password:",
+      user.password ? "****" : "NULL",
+    )
 
-    const isValidPassword = credentials.password === user.password // Assuming plain text password 'admin' or actual hash check
-
-    if (!isValidPassword) {
-      console.log("❌ Invalid password")
+    // IMPORTANT: This assumes plain text passwords are stored in the database.
+    // This is NOT secure for a production environment.
+    // For a real application, use password hashing (e.g., bcrypt).
+    if (user.password !== credentials.password) {
+      console.log("Invalid password for user:", user.username)
       return null
     }
 
     if (user.status !== "aktif") {
-      console.log("❌ User is not active:", user.status)
+      console.log("User is not active:", user.username, "Status:", user.status)
       return null
     }
 
-    console.log("✅ Login successful for:", user.username)
+    console.log("Login successful for:", user.username)
     await logActivity(user.id, `User ${user.username} logged in`)
 
     return {
@@ -59,68 +71,83 @@ export async function login(credentials: LoginCredentials): Promise<AuthUser | n
       email: user.email,
       role: user.role as User["role"],
       status: user.status,
-      village_id: user.village_id,
+      village_id: user.village_id, // Ensure this is correctly selected and passed
     }
-  } catch (error) {
-    console.error("💥 Login error:", error)
-    throw error
+  } catch (err: any) {
+    console.error("Login function error:", err)
+    // Check if it's a Supabase specific error or a general one
+    if (err.message.includes("fetch")) {
+      throw new Error(
+        `Network error or Supabase service unavailable. Periksa koneksi internet dan status Supabase. Detail: ${err.message}`,
+      )
+    }
+    throw err // Re-throw other errors
   }
 }
 
 export async function loginCitizen(nik: string, tanggalLahir: string): Promise<AuthUser | null> {
   try {
-    console.log("🔍 Attempting citizen login with NIK:", nik, "Tanggal Lahir:", tanggalLahir)
+    console.log("Attempting citizen login with NIK:", nik, "Tanggal Lahir:", tanggalLahir)
 
-    const { data: citizen, error } = await supabase.from("citizens").select("*").eq("nik", nik).single()
+    const { data: citizen, error } = await supabase
+      .from("citizens")
+      .select("*, villages (nama)") // Fetch village name too
+      .eq("nik", nik)
+      .single()
 
     if (error) {
-      console.error("❌ Citizen query error:", error)
+      console.error("Supabase citizen query error:", error)
       if (error.code === "PGRST116") {
-        console.log("❌ Citizen not found for NIK:", nik)
+        console.log("Citizen not found for NIK:", nik)
         return null
       }
-      throw new Error(`Database error: ${error.message}`)
+      throw new Error(`Database error: ${error.message}. Pastikan tabel 'citizens' ada.`)
     }
 
     if (!citizen) {
-      console.log("❌ No citizen data returned for NIK:", nik)
+      console.log("No citizen data returned for NIK:", nik)
       return null
     }
 
-    // Validate birth date (ensure format matches YYYY-MM-DD)
-    // The input tanggalLahir should also be in YYYY-MM-DD format for direct comparison
+    // Ensure tanggalLahir from input and DB are in YYYY-MM-DD format for comparison
     if (citizen.tanggal_lahir !== tanggalLahir) {
-      console.log(`❌ Invalid birth date. Expected: ${citizen.tanggal_lahir}, Got: ${tanggalLahir}`)
+      console.log(`Invalid birth date for NIK ${nik}. Expected: ${citizen.tanggal_lahir}, Got: ${tanggalLahir}`)
       return null
     }
 
-    console.log("✅ Citizen login successful for:", citizen.nama)
-    await logActivity(null, `Citizen ${citizen.nama} (NIK: ${nik}) logged in`)
+    console.log("Citizen login successful for:", citizen.nama)
+    await logActivity(null, `Citizen ${citizen.nama} (NIK: ${nik}) logged in from village ID ${citizen.village_id}`)
 
     return {
-      id: citizen.id, // This is citizen.id from citizens table
+      id: citizen.id,
       username: citizen.nik,
-      email: `${citizen.nik}@citizen.desa.id`, // Placeholder email
+      email: `${citizen.nik}@citizen.desa.id`,
       role: "masyarakat",
-      status: "aktif", // Citizens are implicitly active if found
+      status: "aktif",
       village_id: citizen.village_id,
-      citizen_details: citizen as Citizen, // Store full citizen details
+      citizen_details: citizen as Citizen,
     }
-  } catch (error) {
-    console.error("💥 Citizen login error:", error)
-    throw error
+  } catch (err: any) {
+    console.error("Citizen login function error:", err)
+    if (err.message.includes("fetch")) {
+      throw new Error(`Network error or Supabase service unavailable. Detail: ${err.message}`)
+    }
+    throw err
   }
 }
 
 export async function logActivity(userId: number | null, action: string, details?: string) {
   try {
-    await supabase.from("activity_logs").insert({
+    const { error } = await supabase.from("activity_logs").insert({
       user_id: userId,
       action,
       details,
-      ip_address: "127.0.0.1", // Placeholder IP
+      ip_address: "127.0.0.1", // Placeholder
     })
-  } catch (error) {
-    console.error("Error logging activity:", error)
+    if (error) {
+      console.warn("Failed to log activity:", error.message)
+    }
+  } catch (err: any) {
+    console.warn("Error in logActivity:", err.message)
   }
 }

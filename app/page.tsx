@@ -2,7 +2,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { login, type AuthUser, type LoginCredentials } from "@/lib/auth"
@@ -11,27 +10,39 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { LogIn, User, Lock, Users } from "lucide-react"
+import { LogIn, User, Lock, Users, Landmark, AlertCircle } from "lucide-react" // Added Landmark, AlertCircle
 import Link from "next/link"
-import SetupInstructions from "@/components/setup-instructions" // Assuming this component exists
+// Assuming SetupInstructions is for database setup guidance
+// import SetupInstructions from "@/components/setup-instructions";
 
 export default function LoginPage() {
   const router = useRouter()
   const [credentials, setCredentials] = useState<LoginCredentials>({ username: "", password: "" })
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [showSetup, setShowSetup] = useState(false)
+  // const [showSetup, setShowSetup] = useState(false); // If you have a setup guide component
 
   // Redirect if already logged in
   useEffect(() => {
     const storedUser = localStorage.getItem("user")
     if (storedUser) {
-      const user: AuthUser = JSON.parse(storedUser)
-      redirectToDashboard(user.role)
+      try {
+        const user: AuthUser = JSON.parse(storedUser)
+        if (user && user.role) {
+          console.log("User found in localStorage, redirecting:", user)
+          redirectToDashboard(user.role)
+        } else {
+          localStorage.removeItem("user") // Clear invalid stored user
+        }
+      } catch (e) {
+        console.error("Error parsing user from localStorage:", e)
+        localStorage.removeItem("user")
+      }
     }
   }, [router])
 
-  const redirectToDashboard = (role: string) => {
+  const redirectToDashboard = (role: User["role"]) => {
+    console.log("Redirecting to dashboard for role:", role)
     switch (role) {
       case "super_admin":
         router.push("/super-admin/dashboard")
@@ -39,13 +50,14 @@ export default function LoginPage() {
       case "admin_desa":
         router.push("/admin-desa/dashboard")
         break
-      case "perangkat_desa": // New role
+      case "perangkat_desa":
         router.push("/perangkat-desa/dashboard")
         break
-      case "masyarakat": // Should not happen here, masyarakat has own login
+      case "masyarakat": // This case should ideally be handled by masyarakat login page
         router.push("/masyarakat/dashboard")
         break
       default:
+        console.warn("Unknown role, redirecting to home:", role)
         router.push("/") // Fallback
     }
   }
@@ -58,70 +70,50 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
     setIsLoading(true)
+    console.log("Submitting login for:", credentials.username)
     try {
       const user = await login(credentials)
       if (user) {
+        console.log("Login successful, user data:", user)
         localStorage.setItem("user", JSON.stringify(user))
         redirectToDashboard(user.role)
       } else {
-        setError("Username atau password salah, atau akun tidak aktif.")
+        console.log("Login failed, no user object returned.")
+        setError("Username atau password salah, atau akun tidak aktif/tidak ditemukan.")
       }
     } catch (err: any) {
-      console.error("Login error:", err)
-      if (err.message.includes("Database not set up")) {
-        setError("Sistem belum siap. Klik 'Panduan Setup Database' untuk instruksi.")
-        setShowSetup(true)
-      } else {
-        setError(err.message || "Terjadi kesalahan saat login.")
-      }
+      console.error("Login page handleSubmit error:", err)
+      setError(err.message || "Terjadi kesalahan saat login. Periksa konsol untuk detail.")
+      // if (err.message.includes("Database not set up")) {
+      //   setShowSetup(true);
+      // }
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (showSetup) {
-    return <SetupInstructions onBackToLogin={() => setShowSetup(false)} />
-  }
+  // if (showSetup) {
+  //   return <SetupInstructions onBackToLogin={() => setShowSetup(false)} />;
+  // }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-700 p-4">
-      <Card className="w-full max-w-md shadow-2xl bg-white dark:bg-slate-800">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            {/* You can add a logo here */}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="64"
-              height="64"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-landmark mx-auto text-blue-600 dark:text-blue-500"
-            >
-              <line x1="3" x2="21" y1="22" y2="22" />
-              <line x1="6" x2="6" y1="18" y2="11" />
-              <line x1="10" x2="10" y1="18" y2="11" />
-              <line x1="14" x2="14" y1="18" y2="11" />
-              <line x1="18" x2="18" y1="18" y2="11" />
-              <polygon points="12 2 20 7 4 7" />
-            </svg>
-          </div>
-          <CardTitle className="text-3xl font-bold text-gray-900 dark:text-white">Sistem Informasi Desa</CardTitle>
-          <CardDescription className="text-gray-600 dark:text-gray-400">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-100 to-sky-100 dark:from-slate-900 dark:to-sky-900 p-4">
+      <Card className="w-full max-w-md shadow-xl bg-white dark:bg-slate-800 rounded-lg">
+        <CardHeader className="text-center p-6">
+          <Landmark className="mx-auto h-16 w-16 text-sky-600 dark:text-sky-500 mb-4" />
+          <CardTitle className="text-3xl font-bold text-slate-800 dark:text-white">Sistem Informasi Desa</CardTitle>
+          <CardDescription className="text-slate-600 dark:text-slate-400 pt-1">
             Login untuk melanjutkan ke dashboard Anda.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-gray-700 dark:text-gray-300">
+              <Label htmlFor="username" className="text-slate-700 dark:text-slate-300 font-medium">
                 Username
               </Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500" />
                 <Input
                   id="username"
                   name="username"
@@ -130,16 +122,16 @@ export default function LoginPage() {
                   onChange={handleChange}
                   placeholder="Masukkan username Anda"
                   required
-                  className="pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                  className="pl-10 w-full border-slate-300 dark:border-slate-600 focus:border-sky-500 dark:focus:border-sky-500 dark:bg-slate-700 dark:text-white rounded-md py-2.5"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-gray-700 dark:text-gray-300">
+              <Label htmlFor="password" className="text-slate-700 dark:text-slate-300 font-medium">
                 Password
               </Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500" />
                 <Input
                   id="password"
                   name="password"
@@ -148,50 +140,60 @@ export default function LoginPage() {
                   onChange={handleChange}
                   placeholder="Masukkan password Anda"
                   required
-                  className="pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                  className="pl-10 w-full border-slate-300 dark:border-slate-600 focus:border-sky-500 dark:focus:border-sky-500 dark:bg-slate-700 dark:text-white rounded-md py-2.5"
                 />
               </div>
             </div>
             {error && (
-              <Alert variant="destructive" className="bg-red-50 dark:bg-red-900 border-red-300 dark:border-red-700">
-                <AlertTitle className="text-red-700 dark:text-red-300">Login Gagal</AlertTitle>
-                <AlertDescription className="text-red-600 dark:text-red-400">{error}</AlertDescription>
+              <Alert
+                variant="destructive"
+                className="bg-red-50 dark:bg-red-900/50 border-red-300 dark:border-red-700 p-3 rounded-md"
+              >
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400 mr-2 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <AlertTitle className="font-semibold text-red-700 dark:text-red-300">Login Gagal</AlertTitle>
+                    <AlertDescription className="text-sm text-red-600 dark:text-red-400">{error}</AlertDescription>
+                  </div>
+                </div>
               </Alert>
             )}
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
+              className="w-full bg-sky-600 hover:bg-sky-700 text-white dark:bg-sky-500 dark:hover:bg-sky-600 rounded-md py-2.5 text-base font-semibold"
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                   Memproses...
                 </>
               ) : (
                 <>
-                  <LogIn className="mr-2 h-4 w-4" /> Login
+                  <LogIn className="mr-2 h-5 w-5" /> Login
                 </>
               )}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col items-center space-y-3 pt-6">
-          <Link href="/masyarakat/login" passHref>
-            <Button
-              variant="outline"
-              className="w-full border-green-500 text-green-600 hover:bg-green-50 dark:border-green-400 dark:text-green-400 dark:hover:bg-slate-700"
-            >
-              <Users className="mr-2 h-4 w-4" /> Login sebagai Masyarakat
-            </Button>
+        <CardFooter className="flex flex-col items-center space-y-4 p-6 border-t dark:border-slate-700 mt-2">
+          <Link href="/masyarakat/login" passHref legacyBehavior>
+            <a className="w-full">
+              <Button
+                variant="outline"
+                className="w-full border-green-500 text-green-600 hover:bg-green-50 dark:border-green-400 dark:text-green-400 dark:hover:bg-slate-700 rounded-md py-2.5"
+              >
+                <Users className="mr-2 h-5 w-5" /> Login sebagai Masyarakat
+              </Button>
+            </a>
           </Link>
-          <Button
+          {/* <Button
             variant="link"
-            onClick={() => setShowSetup(true)}
-            className="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+            onClick={() => setShowSetup(true)} // If you have a setup guide component
+            className="text-sm text-slate-600 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-400"
           >
             Panduan Setup Database?
-          </Button>
+          </Button> */}
         </CardFooter>
       </Card>
     </div>
