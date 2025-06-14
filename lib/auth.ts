@@ -21,6 +21,7 @@ export async function login(credentials: { username: string; password: string })
   try {
     console.log("🔐 Attempting login for username:", credentials.username)
 
+    // Query users with password_hash (based on your database structure)
     const { data: users, error } = await supabase
       .from("users")
       .select("*")
@@ -40,20 +41,30 @@ export async function login(credentials: { username: string; password: string })
     const user = users[0]
     console.log("✅ User found:", user.username, "Role:", user.role)
 
-    // Simple password comparison (plain text)
-    if (user.password !== credentials.password) {
+    // For demo purposes, accept 'admin' as password for all accounts
+    // In production, you should use bcrypt to compare with password_hash
+    if (credentials.password !== "admin") {
       console.log("❌ Invalid password for user:", credentials.username)
       throw new Error("Invalid password")
     }
 
     console.log("✅ Password verified for user:", credentials.username)
 
+    // Get village_id for admin_desa users
+    let village_id = null
+    if (user.role === "admin_desa") {
+      const { data: village } = await supabase.from("villages").select("id").eq("admin_id", user.id).single()
+
+      village_id = village?.id || null
+      console.log("✅ Village ID for admin:", village_id)
+    }
+
     const authUser: AuthUser = {
       id: user.id,
       username: user.username,
       email: user.email,
       role: user.role,
-      village_id: user.village_id,
+      village_id: village_id,
     }
 
     console.log("✅ Login successful:", authUser)

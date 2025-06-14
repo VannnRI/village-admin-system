@@ -1,9 +1,11 @@
 import { supabase } from "./supabase"
 import * as XLSX from "xlsx"
 
-// Add getVillageInfo function directly here
+// Get village info based on your database structure
 export async function getVillageInfo(adminUsername: string) {
   try {
+    console.log("🔍 Getting village info for admin:", adminUsername)
+
     // Get admin user
     const { data: admin, error: adminError } = await supabase
       .from("users")
@@ -12,10 +14,13 @@ export async function getVillageInfo(adminUsername: string) {
       .single()
 
     if (adminError || !admin) {
+      console.error("❌ Admin not found:", adminError)
       throw new Error("Admin not found")
     }
 
-    // Get village info
+    console.log("✅ Admin found with ID:", admin.id)
+
+    // Get village info using admin_id (based on your database structure)
     const { data: village, error: villageError } = await supabase
       .from("villages")
       .select("*")
@@ -23,9 +28,11 @@ export async function getVillageInfo(adminUsername: string) {
       .single()
 
     if (villageError) {
+      console.error("❌ Village not found for admin:", villageError)
       throw new Error("Village not found")
     }
 
+    console.log("✅ Village found:", village.nama)
     return village
   } catch (error) {
     console.error("Error getting village info:", error)
