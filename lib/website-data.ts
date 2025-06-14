@@ -1,246 +1,500 @@
-// Sample data for website management
+import { supabase } from "./supabase"
 
-// Website content sections
-interface WebsiteContent {
+// Types
+export interface WebsiteContent {
   id: number
+  village_id: number
   section_name: string
   title: string
   content: string
   is_active: boolean
-  last_updated: string
+  created_at: string
+  updated_at: string
 }
 
-// Village news
-interface VillageNews {
+export interface VillageNews {
   id: number
+  village_id: number
   title: string
   content: string
-  image_url: string
+  image_url?: string
   status: "published" | "draft"
   published_date: string
   author: string
+  created_at: string
+  updated_at: string
 }
 
-// Village services
-interface VillageService {
+export interface VillageService {
   id: number
+  village_id: number
   service_name: string
   description: string
   requirements: string
   procedure: string
+  duration: string
   is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
-// Website settings
-interface WebsiteSettings {
+export interface WebsiteSettings {
+  id: number
+  village_id: number
   village_name: string
-  village_tagline: string
-  village_description: string
-  village_address: string
-  village_phone: string
-  village_email: string
-  social_facebook: string
-  social_twitter: string
-  social_instagram: string
+  village_tagline?: string
+  village_description?: string
+  village_address?: string
+  village_phone?: string
+  village_email?: string
+  social_facebook?: string
+  social_twitter?: string
+  social_instagram?: string
   logo_url: string
   theme_color: string
+  created_at: string
+  updated_at: string
 }
 
-// Sample data
-let websiteContent: WebsiteContent[] = [
-  {
-    id: 1,
-    section_name: "hero",
-    title: "Selamat Datang di Desa Sukamaju",
-    content: "Desa Sukamaju adalah desa yang indah dan makmur dengan masyarakat yang ramah dan gotong royong.",
-    is_active: true,
-    last_updated: "2023-06-10T08:30:00Z",
-  },
-  {
-    id: 2,
-    section_name: "about",
-    title: "Tentang Desa Sukamaju",
-    content:
-      "Desa Sukamaju terletak di kecamatan Cianjur, Jawa Barat. Desa ini memiliki luas wilayah sekitar 500 hektar dengan jumlah penduduk sekitar 5000 jiwa.",
-    is_active: true,
-    last_updated: "2023-06-09T10:15:00Z",
-  },
-  {
-    id: 3,
-    section_name: "vision",
-    title: "Visi & Misi",
-    content:
-      "Visi: Mewujudkan Desa Sukamaju yang mandiri, sejahtera, dan berkeadilan.\n\nMisi:\n1. Meningkatkan kualitas sumber daya manusia\n2. Mengembangkan ekonomi lokal\n3. Meningkatkan infrastruktur desa\n4. Melestarikan lingkungan hidup",
-    is_active: true,
-    last_updated: "2023-06-08T14:20:00Z",
-  },
-  {
-    id: 4,
-    section_name: "contact",
-    title: "Hubungi Kami",
-    content:
-      "Kantor Desa Sukamaju\nJl. Raya Sukamaju No. 123\nKecamatan Cianjur, Jawa Barat\nTelp: 0812-3456-7890\nEmail: info@desasukamaju.desa.id",
-    is_active: true,
-    last_updated: "2023-06-07T09:45:00Z",
-  },
-]
+// Helper function to get village ID from admin username
+async function getVillageIdFromAdmin(adminUsername: string): Promise<number | null> {
+  try {
+    const { data: admin, error: adminError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("username", adminUsername)
+      .single()
 
-let villageNews: VillageNews[] = [
-  {
-    id: 1,
-    title: "Pembangunan Jembatan Desa Sukamaju Telah Selesai",
-    content:
-      "Pembangunan jembatan yang menghubungkan Desa Sukamaju dengan Desa Sukasari telah selesai dilaksanakan. Jembatan ini diharapkan dapat memperlancar arus transportasi dan meningkatkan perekonomian kedua desa.",
-    image_url: "/placeholder.svg?height=200&width=300",
-    status: "published",
-    published_date: "2023-06-15",
-    author: "Admin Desa",
-  },
-  {
-    id: 2,
-    title: "Pelatihan Keterampilan untuk Pemuda Desa",
-    content:
-      "Pemerintah Desa Sukamaju mengadakan pelatihan keterampilan untuk pemuda desa. Pelatihan ini bertujuan untuk meningkatkan keterampilan dan daya saing pemuda desa di dunia kerja.",
-    image_url: "/placeholder.svg?height=200&width=300",
-    status: "published",
-    published_date: "2023-06-10",
-    author: "Admin Desa",
-  },
-  {
-    id: 3,
-    title: "Rencana Pembangunan Desa Tahun 2023",
-    content:
-      "Pemerintah Desa Sukamaju telah menyusun rencana pembangunan desa untuk tahun 2023. Rencana ini meliputi pembangunan infrastruktur, peningkatan kualitas pendidikan, dan pengembangan ekonomi lokal.",
-    image_url: "/placeholder.svg?height=200&width=300",
-    status: "draft",
-    published_date: "2023-06-05",
-    author: "Kepala Desa",
-  },
-]
+    if (adminError || !admin) {
+      throw new Error("Admin not found")
+    }
 
-let villageServices: VillageService[] = [
-  {
-    id: 1,
-    service_name: "Pembuatan KTP",
-    description: "Layanan pembuatan Kartu Tanda Penduduk (KTP) untuk warga desa.",
-    requirements: "1. Fotokopi Kartu Keluarga\n2. Surat Pengantar RT/RW\n3. Pas foto 3x4 (2 lembar)",
-    procedure:
-      "1. Mengajukan permohonan ke RT/RW\n2. Mengisi formulir di kantor desa\n3. Melampirkan persyaratan\n4. Menunggu proses pembuatan\n5. Pengambilan KTP",
-    is_active: true,
-  },
-  {
-    id: 2,
-    service_name: "Pembuatan Akta Kelahiran",
-    description: "Layanan pembuatan Akta Kelahiran untuk warga desa.",
-    requirements:
-      "1. Surat Keterangan Lahir dari Bidan/Rumah Sakit\n2. Fotokopi KTP Orang Tua\n3. Fotokopi Kartu Keluarga\n4. Fotokopi Buku Nikah/Akta Perkawinan",
-    procedure:
-      "1. Mengajukan permohonan ke RT/RW\n2. Mengisi formulir di kantor desa\n3. Melampirkan persyaratan\n4. Menunggu proses pembuatan\n5. Pengambilan Akta Kelahiran",
-    is_active: true,
-  },
-  {
-    id: 3,
-    service_name: "Surat Keterangan Tidak Mampu",
-    description: "Layanan pembuatan Surat Keterangan Tidak Mampu (SKTM) untuk warga desa.",
-    requirements: "1. Fotokopi KTP\n2. Fotokopi Kartu Keluarga\n3. Surat Pengantar RT/RW",
-    procedure:
-      "1. Mengajukan permohonan ke RT/RW\n2. Mengisi formulir di kantor desa\n3. Melampirkan persyaratan\n4. Menunggu proses pembuatan\n5. Pengambilan SKTM",
-    is_active: true,
-  },
-]
+    const { data: village, error: villageError } = await supabase
+      .from("villages")
+      .select("id")
+      .eq("admin_id", admin.id)
+      .single()
 
-let websiteSettings: WebsiteSettings = {
-  village_name: "Desa Sukamaju",
-  village_tagline: "Bersatu untuk Maju",
-  village_description:
-    "Desa Sukamaju adalah desa yang terletak di kecamatan Cianjur, Jawa Barat. Desa ini memiliki potensi pertanian dan pariwisata yang sangat baik.",
-  village_address: "Jl. Raya Sukamaju No. 123, Kecamatan Cianjur, Jawa Barat",
-  village_phone: "0812-3456-7890",
-  village_email: "info@desasukamaju.desa.id",
-  social_facebook: "https://facebook.com/desasukamaju",
-  social_twitter: "https://twitter.com/desasukamaju",
-  social_instagram: "https://instagram.com/desasukamaju",
-  logo_url: "/placeholder.svg?height=100&width=100",
-  theme_color: "#4CAF50",
-}
+    if (villageError || !village) {
+      throw new Error("Village not found")
+    }
 
-// CRUD functions for website content
-export function getWebsiteContent(): WebsiteContent[] {
-  return [...websiteContent]
-}
-
-export function getWebsiteContentById(id: number): WebsiteContent | undefined {
-  return websiteContent.find((content) => content.id === id)
-}
-
-export function addWebsiteContent(content: WebsiteContent): void {
-  websiteContent.push(content)
-}
-
-export function updateWebsiteContent(updatedContent: WebsiteContent): void {
-  const index = websiteContent.findIndex((content) => content.id === updatedContent.id)
-  if (index !== -1) {
-    websiteContent[index] = updatedContent
+    return village.id
+  } catch (error) {
+    console.error("Error getting village ID:", error)
+    return null
   }
 }
 
-export function deleteWebsiteContent(id: number): void {
-  websiteContent = websiteContent.filter((content) => content.id !== id)
-}
+// Website Content Functions
+export async function getWebsiteContent(adminUsername: string): Promise<WebsiteContent[]> {
+  try {
+    const villageId = await getVillageIdFromAdmin(adminUsername)
+    if (!villageId) return []
 
-// CRUD functions for village news
-export function getVillageNews(): VillageNews[] {
-  return [...villageNews]
-}
+    const { data, error } = await supabase
+      .from("website_content")
+      .select("*")
+      .eq("village_id", villageId)
+      .order("section_name", { ascending: true })
 
-export function getVillageNewsById(id: number): VillageNews | undefined {
-  return villageNews.find((news) => news.id === id)
-}
+    if (error) {
+      console.error("Error fetching website content:", error)
+      return []
+    }
 
-export function addVillageNews(news: VillageNews): void {
-  villageNews.push(news)
-}
-
-export function updateVillageNews(updatedNews: VillageNews): void {
-  const index = villageNews.findIndex((news) => news.id === updatedNews.id)
-  if (index !== -1) {
-    villageNews[index] = updatedNews
+    return data || []
+  } catch (error) {
+    console.error("Error getting website content:", error)
+    return []
   }
 }
 
-export function deleteVillageNews(id: number): void {
-  villageNews = villageNews.filter((news) => news.id !== id)
-}
+export async function addWebsiteContent(
+  adminUsername: string,
+  content: Omit<WebsiteContent, "id" | "village_id" | "created_at" | "updated_at">,
+): Promise<WebsiteContent | null> {
+  try {
+    const villageId = await getVillageIdFromAdmin(adminUsername)
+    if (!villageId) throw new Error("Village not found")
 
-// CRUD functions for village services
-export function getVillageServices(): VillageService[] {
-  return [...villageServices]
-}
+    const { data, error } = await supabase
+      .from("website_content")
+      .insert({
+        ...content,
+        village_id: villageId,
+      })
+      .select()
+      .single()
 
-export function getVillageServiceById(id: number): VillageService | undefined {
-  return villageServices.find((service) => service.id === id)
-}
+    if (error) {
+      throw new Error(error.message)
+    }
 
-export function addVillageService(service: VillageService): void {
-  villageServices.push(service)
-}
-
-export function updateVillageService(updatedService: VillageService): void {
-  const index = villageServices.findIndex((service) => service.id === updatedService.id)
-  if (index !== -1) {
-    villageServices[index] = updatedService
+    return data
+  } catch (error) {
+    console.error("Error adding website content:", error)
+    throw error
   }
 }
 
-export function deleteVillageService(id: number): void {
-  villageServices = villageServices.filter((service) => service.id !== id)
+export async function updateWebsiteContent(
+  contentId: number,
+  updates: Partial<WebsiteContent>,
+): Promise<WebsiteContent | null> {
+  try {
+    const { data, error } = await supabase
+      .from("website_content")
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", contentId)
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error updating website content:", error)
+    throw error
+  }
 }
 
-// Functions for website settings
-export function getWebsiteSettings(): WebsiteSettings {
-  return { ...websiteSettings }
+export async function deleteWebsiteContent(contentId: number): Promise<boolean> {
+  try {
+    const { error } = await supabase.from("website_content").delete().eq("id", contentId)
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return true
+  } catch (error) {
+    console.error("Error deleting website content:", error)
+    throw error
+  }
 }
 
-export function updateWebsiteSettings(updatedSettings: WebsiteSettings): void {
-  websiteSettings = { ...updatedSettings }
+// Village News Functions
+export async function getVillageNews(adminUsername: string): Promise<VillageNews[]> {
+  try {
+    const villageId = await getVillageIdFromAdmin(adminUsername)
+    if (!villageId) return []
+
+    const { data, error } = await supabase
+      .from("village_news")
+      .select("*")
+      .eq("village_id", villageId)
+      .order("published_date", { ascending: false })
+
+    if (error) {
+      console.error("Error fetching village news:", error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error getting village news:", error)
+    return []
+  }
+}
+
+export async function addVillageNews(
+  adminUsername: string,
+  news: Omit<VillageNews, "id" | "village_id" | "created_at" | "updated_at">,
+): Promise<VillageNews | null> {
+  try {
+    const villageId = await getVillageIdFromAdmin(adminUsername)
+    if (!villageId) throw new Error("Village not found")
+
+    const { data, error } = await supabase
+      .from("village_news")
+      .insert({
+        ...news,
+        village_id: villageId,
+        image_url: news.image_url || "/placeholder.svg?height=200&width=300",
+      })
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error adding village news:", error)
+    throw error
+  }
+}
+
+export async function updateVillageNews(newsId: number, updates: Partial<VillageNews>): Promise<VillageNews | null> {
+  try {
+    const { data, error } = await supabase
+      .from("village_news")
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", newsId)
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error updating village news:", error)
+    throw error
+  }
+}
+
+export async function deleteVillageNews(newsId: number): Promise<boolean> {
+  try {
+    const { error } = await supabase.from("village_news").delete().eq("id", newsId)
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return true
+  } catch (error) {
+    console.error("Error deleting village news:", error)
+    throw error
+  }
+}
+
+// Village Services Functions
+export async function getVillageServices(adminUsername: string): Promise<VillageService[]> {
+  try {
+    const villageId = await getVillageIdFromAdmin(adminUsername)
+    if (!villageId) return []
+
+    const { data, error } = await supabase
+      .from("village_services")
+      .select("*")
+      .eq("village_id", villageId)
+      .order("service_name", { ascending: true })
+
+    if (error) {
+      console.error("Error fetching village services:", error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error getting village services:", error)
+    return []
+  }
+}
+
+export async function addVillageService(
+  adminUsername: string,
+  service: Omit<VillageService, "id" | "village_id" | "created_at" | "updated_at">,
+): Promise<VillageService | null> {
+  try {
+    const villageId = await getVillageIdFromAdmin(adminUsername)
+    if (!villageId) throw new Error("Village not found")
+
+    const { data, error } = await supabase
+      .from("village_services")
+      .insert({
+        ...service,
+        village_id: villageId,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error adding village service:", error)
+    throw error
+  }
+}
+
+export async function updateVillageService(
+  serviceId: number,
+  updates: Partial<VillageService>,
+): Promise<VillageService | null> {
+  try {
+    const { data, error } = await supabase
+      .from("village_services")
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", serviceId)
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error updating village service:", error)
+    throw error
+  }
+}
+
+export async function deleteVillageService(serviceId: number): Promise<boolean> {
+  try {
+    const { error } = await supabase.from("village_services").delete().eq("id", serviceId)
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return true
+  } catch (error) {
+    console.error("Error deleting village service:", error)
+    throw error
+  }
+}
+
+// Website Settings Functions
+export async function getWebsiteSettings(adminUsername: string): Promise<WebsiteSettings | null> {
+  try {
+    const villageId = await getVillageIdFromAdmin(adminUsername)
+    if (!villageId) return null
+
+    const { data, error } = await supabase.from("website_settings").select("*").eq("village_id", villageId).single()
+
+    if (error) {
+      console.error("Error fetching website settings:", error)
+      return null
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error getting website settings:", error)
+    return null
+  }
+}
+
+export async function updateWebsiteSettings(
+  adminUsername: string,
+  settings: Partial<WebsiteSettings>,
+): Promise<WebsiteSettings | null> {
+  try {
+    const villageId = await getVillageIdFromAdmin(adminUsername)
+    if (!villageId) throw new Error("Village not found")
+
+    const { data, error } = await supabase
+      .from("website_settings")
+      .upsert({
+        ...settings,
+        village_id: villageId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("village_id", villageId)
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error updating website settings:", error)
+    throw error
+  }
+}
+
+// Public functions for website display (by village ID)
+export async function getPublicWebsiteContent(villageId: number): Promise<WebsiteContent[]> {
+  try {
+    const { data, error } = await supabase
+      .from("website_content")
+      .select("*")
+      .eq("village_id", villageId)
+      .eq("is_active", true)
+      .order("section_name", { ascending: true })
+
+    if (error) {
+      console.error("Error fetching public website content:", error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error getting public website content:", error)
+    return []
+  }
+}
+
+export async function getPublicVillageNews(villageId: number, limit?: number): Promise<VillageNews[]> {
+  try {
+    let query = supabase
+      .from("village_news")
+      .select("*")
+      .eq("village_id", villageId)
+      .eq("status", "published")
+      .order("published_date", { ascending: false })
+
+    if (limit) {
+      query = query.limit(limit)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error("Error fetching public village news:", error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error getting public village news:", error)
+    return []
+  }
+}
+
+export async function getPublicVillageServices(villageId: number): Promise<VillageService[]> {
+  try {
+    const { data, error } = await supabase
+      .from("village_services")
+      .select("*")
+      .eq("village_id", villageId)
+      .eq("is_active", true)
+      .order("service_name", { ascending: true })
+
+    if (error) {
+      console.error("Error fetching public village services:", error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error getting public village services:", error)
+    return []
+  }
+}
+
+export async function getPublicWebsiteSettings(villageId: number): Promise<WebsiteSettings | null> {
+  try {
+    const { data, error } = await supabase.from("website_settings").select("*").eq("village_id", villageId).single()
+
+    if (error) {
+      console.error("Error fetching public website settings:", error)
+      return null
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error getting public website settings:", error)
+    return null
+  }
 }
