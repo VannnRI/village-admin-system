@@ -5,18 +5,17 @@ export interface LetterRequest {
   id: number
   citizen_id: number
   village_id: number
-  letter_type: string
-  jenis_surat?: string
-  purpose: string
+  jenis_surat: string
+  keperluan: string
   status: "pending" | "approved" | "rejected"
-  request_date: string
+  tanggal_pengajuan: string
+  tanggal_disetujui?: string
+  disetujui_oleh?: number
+  nomor_surat?: string
+  alasan_penolakan?: string
+  catatan?: string
   created_at?: string
   updated_at?: string
-  approved_date?: string
-  approved_by?: number
-  rejection_reason?: string
-  no_surat?: string
-  notes?: string
   citizen?: {
     nama: string
     nik: string
@@ -38,12 +37,12 @@ export async function getLetterRequests(adminUsername: string): Promise<LetterRe
     console.log("✅ Village found:", villageInfo.name, "ID:", villageInfo.id)
     console.log("🔍 Fetching letter requests for village:", villageInfo.id)
 
-    // Use a simpler query approach to avoid relation issues
+    // Fetch letter requests with correct column names
     const { data: letterRequests, error: letterError } = await supabase
       .from("letter_requests")
       .select("*")
       .eq("village_id", villageInfo.id)
-      .order("created_at", { ascending: false })
+      .order("tanggal_pengajuan", { ascending: false })
 
     if (letterError) {
       console.error("❌ Error fetching letter requests:", letterError)
@@ -57,7 +56,7 @@ export async function getLetterRequests(adminUsername: string): Promise<LetterRe
 
     console.log("✅ Found letter requests:", letterRequests.length)
 
-    // Fetch citizen data separately to avoid relation issues
+    // Fetch citizen data separately
     const citizenIds = letterRequests.map((lr) => lr.citizen_id)
     const { data: citizens, error: citizenError } = await supabase
       .from("citizens")
@@ -66,7 +65,6 @@ export async function getLetterRequests(adminUsername: string): Promise<LetterRe
 
     if (citizenError) {
       console.error("❌ Error fetching citizens:", citizenError)
-      // Continue without citizen data rather than failing completely
     }
 
     // Combine the data manually
@@ -103,13 +101,13 @@ export async function updateLetterStatus(
     }
 
     if (status === "approved") {
-      updateData.approved_by = approvedBy
-      updateData.approved_date = new Date().toISOString()
+      updateData.disetujui_oleh = approvedBy
+      updateData.tanggal_disetujui = new Date().toISOString()
       if (letterNumber) {
-        updateData.no_surat = letterNumber
+        updateData.nomor_surat = letterNumber
       }
     } else if (status === "rejected") {
-      updateData.rejection_reason = rejectionReason
+      updateData.alasan_penolakan = rejectionReason
     }
 
     const { error } = await supabase.from("letter_requests").update(updateData).eq("id", letterId)
@@ -144,8 +142,8 @@ export async function generateLetterNumber(jenisSurat: string, adminUsername: st
       .eq("village_id", villageInfo.id)
       .eq("jenis_surat", jenisSurat)
       .eq("status", "approved")
-      .gte("approved_date", `${year}-${month}-01`)
-      .lt("approved_date", `${year}-${month}-32`)
+      .gte("tanggal_disetujui", `${year}-${month}-01`)
+      .lt("tanggal_disetujui", `${year}-${month}-32`)
 
     const sequence = String((count || 0) + 1).padStart(3, "0")
 
@@ -168,7 +166,6 @@ export async function generateLetterNumber(jenisSurat: string, adminUsername: st
   }
 }
 
-// Get letter statistics for dashboard
 export async function getLetterStats(villageId: number) {
   try {
     console.log("📊 Fetching letter statistics for village:", villageId)
