@@ -4,18 +4,18 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { loginCitizen } from "@/lib/auth"
+import { loginCitizen, type CitizenLoginCredentials } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { User, Calendar, LogIn } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { LogIn, User, Calendar, ArrowLeft } from "lucide-react"
+import Link from "next/link"
 
 export default function MasyarakatLoginPage() {
   const router = useRouter()
-  const [nik, setNik] = useState("")
-  const [tanggalLahir, setTanggalLahir] = useState("") // Expected format: YYYY-MM-DD
+  const [credentials, setCredentials] = useState<CitizenLoginCredentials>({ nik: "", tanggalLahir: "" })
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -24,110 +24,110 @@ export default function MasyarakatLoginPage() {
     setError(null)
     setIsLoading(true)
 
-    if (!nik || !tanggalLahir) {
-      setError("NIK dan Tanggal Lahir harus diisi.")
-      setIsLoading(false)
-      return
-    }
-
-    // Basic validation for NIK length and date format
-    if (nik.length !== 16) {
-      setError("NIK harus 16 digit.")
-      setIsLoading(false)
-      return
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggalLahir)) {
-      setError("Format Tanggal Lahir harus YYYY-MM-DD (contoh: 1990-12-31).")
+    if (credentials.nik.length !== 16) {
+      setError("NIK harus 16 digit")
       setIsLoading(false)
       return
     }
 
     try {
-      const user = await loginCitizen(nik, tanggalLahir)
+      const user = await loginCitizen(credentials)
       if (user) {
-        localStorage.setItem("user", JSON.stringify(user)) // Store user session
+        localStorage.setItem("user", JSON.stringify(user))
         router.push("/masyarakat/dashboard")
       } else {
-        setError("Login gagal. Periksa kembali NIK dan Tanggal Lahir Anda.")
+        setError("NIK atau tanggal lahir tidak valid")
       }
     } catch (err: any) {
-      console.error("Login error:", err)
-      setError(err.message || "Terjadi kesalahan saat login.")
+      setError(err.message || "Terjadi kesalahan saat login")
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">Login Masyarakat</CardTitle>
-          <CardDescription className="text-center">
-            Masukkan NIK dan Tanggal Lahir Anda untuk mengakses layanan.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="nik">NIK (Nomor Induk Kependudukan)</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  id="nik"
-                  type="text"
-                  value={nik}
-                  onChange={(e) => setNik(e.target.value)}
-                  placeholder="Masukkan 16 digit NIK Anda"
-                  required
-                  maxLength={16}
-                  className="pl-10"
-                />
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center">
+          <User className="mx-auto h-12 w-12 text-green-600 mb-4" />
+          <h1 className="text-3xl font-bold text-gray-900">Portal Masyarakat</h1>
+          <p className="text-gray-600 mt-2">Login dengan NIK dan tanggal lahir</p>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Login Masyarakat</CardTitle>
+            <CardDescription>Masukkan NIK dan tanggal lahir Anda</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nik">NIK (16 digit)</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="nik"
+                    type="text"
+                    value={credentials.nik}
+                    onChange={(e) => setCredentials({ ...credentials, nik: e.target.value })}
+                    placeholder="Masukkan NIK 16 digit"
+                    className="pl-10"
+                    maxLength={16}
+                    required
+                  />
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tanggalLahir">Tanggal Lahir</Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  id="tanggalLahir"
-                  type="date" // Using type="date" for easier input, ensure value is formatted to YYYY-MM-DD
-                  value={tanggalLahir}
-                  onChange={(e) => setTanggalLahir(e.target.value)}
-                  placeholder="YYYY-MM-DD"
-                  required
-                  className="pl-10"
-                />
+              <div className="space-y-2">
+                <Label htmlFor="tanggalLahir">Tanggal Lahir</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="tanggalLahir"
+                    type="date"
+                    value={credentials.tanggalLahir}
+                    onChange={(e) => setCredentials({ ...credentials, tanggalLahir: e.target.value })}
+                    className="pl-10"
+                    required
+                  />
+                </div>
               </div>
-              <p className="text-xs text-gray-500">Format: YYYY-MM-DD (Contoh: 1995-08-17)</p>
-            </div>
-            {error && (
-              <Alert variant="destructive">
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Memproses...
-                </>
-              ) : (
-                <>
-                  <LogIn className="mr-2 h-4 w-4" /> Login
-                </>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Login
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <div className="text-center">
+          <Link href="/">
+            <Button variant="outline" className="w-full">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Kembali ke Login Admin
             </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex flex-col items-center space-y-2">
-          <p className="text-sm text-gray-600">Belum terdaftar atau data salah?</p>
-          <Button variant="link" onClick={() => router.push("/")} className="text-sm">
-            Kembali ke Halaman Utama
-          </Button>
-        </CardFooter>
-      </Card>
+          </Link>
+        </div>
+
+        <div className="text-center text-sm text-gray-600">
+          <p>Demo Account Masyarakat:</p>
+          <p>NIK: 1234567890123456</p>
+          <p>Tanggal Lahir: 1990-01-15</p>
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,12 +1,12 @@
 "use client"
 
-import MasyarakatLayout from "@/components/masyarakat-layout"
 import { useEffect, useState } from "react"
-import type { AuthUser } from "@/lib/auth"
+import MasyarakatLayout from "@/components/masyarakat-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { FileText, User, Clock } from "lucide-react"
 import Link from "next/link"
-import { FileText, UserCircle, Bell } from "lucide-react"
+import type { AuthUser } from "@/lib/auth"
 
 export default function MasyarakatDashboardPage() {
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -21,73 +21,105 @@ export default function MasyarakatDashboardPage() {
   return (
     <MasyarakatLayout>
       <div className="space-y-6">
+        {/* Welcome Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Selamat Datang, {user?.citizen_details?.nama || user?.username}!</CardTitle>
-            <CardDescription>
-              Ini adalah halaman dashboard Anda. Anda dapat mengajukan surat dan melihat informasi lainnya di sini.
-            </CardDescription>
+            <CardTitle className="text-2xl">Selamat Datang, {user?.citizen_details?.nama || "Masyarakat"}!</CardTitle>
+            <CardDescription>Anda dapat mengajukan berbagai jenis surat keterangan melalui portal ini.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-700 dark:text-gray-300">
-              NIK: {user?.username} <br />
-              {user?.citizen_details?.alamat && `Alamat: ${user.citizen_details.alamat}`}
-            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="font-medium">NIK:</p>
+                <p className="text-gray-600">{user?.username}</p>
+              </div>
+              <div>
+                <p className="font-medium">Alamat:</p>
+                <p className="text-gray-600">{user?.citizen_details?.alamat || "-"}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Services Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center space-x-2">
                 <FileText className="h-6 w-6 text-blue-500" />
-                Pengajuan Surat
+                <span>Pengajuan Surat</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Ajukan berbagai jenis surat keterangan secara online dengan mudah dan cepat.
+              <p className="text-sm text-gray-600 mb-4">
+                Ajukan berbagai jenis surat keterangan seperti SKTM, Surat Domisili, dan lainnya.
               </p>
-              <Link href="/masyarakat/request-letter" passHref>
-                <Button className="w-full">Ajukan Surat Sekarang</Button>
+              <Link href="/masyarakat/request-letter">
+                <Button className="w-full">Ajukan Surat</Button>
               </Link>
             </CardContent>
           </Card>
 
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserCircle className="h-6 w-6 text-green-500" />
-                Profil Saya
+              <CardTitle className="flex items-center space-x-2">
+                <Clock className="h-6 w-6 text-green-500" />
+                <span>Status Permohonan</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Lihat dan perbarui data pribadi Anda (Fitur akan datang).
-              </p>
-              <Button className="w-full" variant="outline" disabled>
-                Lihat Profil
+              <p className="text-sm text-gray-600 mb-4">Lihat status permohonan surat yang telah Anda ajukan.</p>
+              <Button variant="outline" className="w-full" disabled>
+                Lihat Status (Segera Hadir)
               </Button>
             </CardContent>
           </Card>
 
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-6 w-6 text-yellow-500" />
-                Notifikasi
+              <CardTitle className="flex items-center space-x-2">
+                <User className="h-6 w-6 text-purple-500" />
+                <span>Profil Saya</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Informasi terbaru mengenai status permohonan Anda (Fitur akan datang).
-              </p>
-              <Button className="w-full" variant="outline" disabled>
-                Lihat Notifikasi
+              <p className="text-sm text-gray-600 mb-4">Lihat dan perbarui informasi profil Anda.</p>
+              <Button variant="outline" className="w-full" disabled>
+                Kelola Profil (Segera Hadir)
               </Button>
             </CardContent>
           </Card>
         </div>
+
+        {/* Available Services */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Layanan Tersedia</CardTitle>
+            <CardDescription>Jenis surat yang dapat Anda ajukan melalui portal ini</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <h4 className="font-medium">Surat Keterangan:</h4>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• Surat Keterangan Tidak Mampu (SKTM)</li>
+                  <li>• Surat Keterangan Domisili</li>
+                  <li>• Surat Keterangan Usaha</li>
+                  <li>• Surat Keterangan Kelahiran</li>
+                </ul>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-medium">Surat Pengantar:</h4>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• Surat Pengantar Nikah</li>
+                  <li>• Surat Pengantar SKCK</li>
+                  <li>• Surat Pengantar Lainnya</li>
+                  <li>• Dan masih banyak lagi</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </MasyarakatLayout>
   )
