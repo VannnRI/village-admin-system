@@ -22,65 +22,77 @@ export interface LoginCredentials {
   password: string
 }
 
-export interface CitizenLoginCredentials {
-  nik: string
-  tanggalLahir: string
-}
-
 export async function login(credentials: LoginCredentials): Promise<AuthUser | null> {
   try {
+    console.log("🔐 Attempting login for username:", credentials.username)
+
     const { data: users, error } = await supabase
       .from("users")
       .select("*")
       .eq("username", credentials.username)
       .eq("status", "aktif")
 
-    if (error || !users || users.length === 0) {
-      return null
+    if (error) {
+      console.error("❌ Database error during login:", error)
+      throw new Error("Database error")
+    }
+
+    if (!users || users.length === 0) {
+      console.log("❌ User not found:", credentials.username)
+      throw new Error("User not found")
     }
 
     const user = users[0]
+    console.log("✅ User found:", user.username, "Role:", user.role)
 
-    // Simple password check - accept "admin" for demo
-    if (credentials.password !== "admin") {
-      return null
+    // Simple password comparison (plain text for demo)
+    if (user.password !== credentials.password) {
+      console.log("❌ Invalid password for user:", credentials.username)
+      throw new Error("Invalid password")
     }
 
-    // Get village_id for admin_desa
-    let village_id = null
-    if (user.role === "admin_desa") {
-      const { data: village } = await supabase.from("villages").select("id").eq("admin_id", user.id).single()
-      village_id = village?.id || null
-    }
+    console.log("✅ Password verified for user:", credentials.username)
 
-    return {
+    const authUser: AuthUser = {
       id: user.id,
       username: user.username,
       email: user.email,
       role: user.role,
-      village_id: village_id,
+      village_id: user.village_id,
     }
+
+    console.log("✅ Login successful:", authUser)
+    return authUser
   } catch (error) {
-    console.error("Login error:", error)
+    console.error("❌ Login error:", error)
     return null
   }
 }
 
-export async function loginCitizen(credentials: CitizenLoginCredentials): Promise<AuthUser | null> {
+export async function loginCitizen(credentials: { nik: string; tanggal_lahir: string }): Promise<AuthUser | null> {
   try {
+    console.log("🔐 Attempting citizen login for NIK:", credentials.nik)
+
     const { data: citizens, error } = await supabase
       .from("citizens")
       .select("*")
       .eq("nik", credentials.nik)
-      .eq("tanggal_lahir", credentials.tanggalLahir)
+      .eq("tanggal_lahir", credentials.tanggal_lahir)
 
-    if (error || !citizens || citizens.length === 0) {
-      return null
+    if (error) {
+      console.error("❌ Database error during citizen login:", error)
+      throw new Error("Database error")
+    }
+
+    if (!citizens || citizens.length === 0) {
+      console.log("❌ Citizen not found with NIK:", credentials.nik)
+      throw new Error("Citizen not found")
     }
 
     const citizen = citizens[0]
+    console.log("✅ Citizen found:", citizen.nama, "NIK:", citizen.nik)
 
-    return {
+    const authUser: AuthUser = {
       id: citizen.id,
       username: citizen.nik,
       email: `${citizen.nik}@citizen.local`,
@@ -88,8 +100,11 @@ export async function loginCitizen(credentials: CitizenLoginCredentials): Promis
       village_id: citizen.village_id,
       citizen_details: citizen,
     }
+
+    console.log("✅ Citizen login successful:", authUser)
+    return authUser
   } catch (error) {
-    console.error("Citizen login error:", error)
+    console.error("❌ Citizen login error:", error)
     return null
   }
 }
@@ -103,8 +118,11 @@ export function getCurrentUser(): AuthUser | null {
   try {
     const userData = localStorage.getItem("user")
     if (!userData) return null
-    return JSON.parse(userData)
+
+    const user = JSON.parse(userData)
+    return user
   } catch (error) {
+    console.error("Error getting current user:", error)
     return null
   }
 }
