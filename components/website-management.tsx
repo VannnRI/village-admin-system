@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Plus, Edit, Trash2, Eye, ImageIcon, SettingsIcon, Loader2 } from "lucide-react"
+import { Plus, Edit, Trash2, SettingsIcon, Loader2, Globe } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
   getWebsiteContent,
@@ -145,7 +145,7 @@ export default function WebsiteManagement() {
   }
 
   const handleDeleteContent = async (contentId: number) => {
-    if (!user) return
+    if (!user || !confirm("Apakah Anda yakin ingin menghapus konten ini?")) return
 
     try {
       await deleteWebsiteContent(contentId)
@@ -176,7 +176,7 @@ export default function WebsiteManagement() {
       const newsData = {
         title: formData.get("title") as string,
         content: formData.get("content") as string,
-        image_url: (formData.get("image_url") as string) || "/placeholder.svg?height=200&width=300",
+        image_url: (formData.get("image_url") as string) || "",
         status: formData.get("status") as "published" | "draft",
         published_date: (formData.get("published_date") as string) || new Date().toISOString().split("T")[0],
         author: (formData.get("author") as string) || "Admin Desa",
@@ -211,7 +211,7 @@ export default function WebsiteManagement() {
   }
 
   const handleDeleteNews = async (newsId: number) => {
-    if (!user) return
+    if (!user || !confirm("Apakah Anda yakin ingin menghapus berita ini?")) return
 
     try {
       await deleteVillageNews(newsId)
@@ -277,7 +277,7 @@ export default function WebsiteManagement() {
   }
 
   const handleDeleteService = async (serviceId: number) => {
-    if (!user) return
+    if (!user || !confirm("Apakah Anda yakin ingin menghapus layanan ini?")) return
 
     try {
       await deleteVillageService(serviceId)
@@ -315,7 +315,7 @@ export default function WebsiteManagement() {
         social_facebook: formData.get("social_facebook") as string,
         social_twitter: formData.get("social_twitter") as string,
         social_instagram: formData.get("social_instagram") as string,
-        logo_url: (formData.get("logo_url") as string) || "/placeholder.svg?height=100&width=100",
+        logo_url: (formData.get("logo_url") as string) || "",
         theme_color: (formData.get("theme_color") as string) || "#4CAF50",
       }
 
@@ -398,7 +398,6 @@ export default function WebsiteManagement() {
                           <SelectItem value="about">Tentang Desa</SelectItem>
                           <SelectItem value="vision">Visi & Misi</SelectItem>
                           <SelectItem value="contact">Kontak</SelectItem>
-                          <SelectItem value="footer">Footer</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -453,7 +452,6 @@ export default function WebsiteManagement() {
                       <TableHead className="min-w-[100px]">Bagian</TableHead>
                       <TableHead className="min-w-[150px]">Judul</TableHead>
                       <TableHead className="min-w-[80px]">Status</TableHead>
-                      <TableHead className="hidden sm:table-cell min-w-[120px]">Terakhir Diperbarui</TableHead>
                       <TableHead className="text-right min-w-[100px]">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -468,9 +466,6 @@ export default function WebsiteManagement() {
                           >
                             {content.is_active ? "Aktif" : "Tidak Aktif"}
                           </span>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {new Date(content.updated_at).toLocaleDateString("id-ID")}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1 sm:gap-2">
@@ -563,18 +558,13 @@ export default function WebsiteManagement() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="image_url">URL Gambar</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="image_url"
-                          name="image_url"
-                          defaultValue={currentNews?.image_url || "/placeholder.svg?height=200&width=300"}
-                          placeholder="URL gambar"
-                        />
-                        <Button type="button" variant="outline" size="icon">
-                          <ImageIcon className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <Label htmlFor="image_url">URL Gambar (Opsional)</Label>
+                      <Input
+                        id="image_url"
+                        name="image_url"
+                        defaultValue={currentNews?.image_url || ""}
+                        placeholder="https://example.com/image.jpg"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="status">Status</Label>
@@ -710,7 +700,7 @@ export default function WebsiteManagement() {
                       id="requirements"
                       name="requirements"
                       defaultValue={currentService?.requirements || ""}
-                      placeholder="Masukkan persyaratan layanan"
+                      placeholder="Masukkan persyaratan layanan (pisahkan dengan enter)"
                       required
                     />
                   </div>
@@ -720,7 +710,7 @@ export default function WebsiteManagement() {
                       id="procedure"
                       name="procedure"
                       defaultValue={currentService?.procedure || ""}
-                      placeholder="Masukkan prosedur layanan"
+                      placeholder="Masukkan prosedur layanan (pisahkan dengan enter)"
                       required
                     />
                   </div>
@@ -907,18 +897,13 @@ export default function WebsiteManagement() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="logo_url">URL Logo</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="logo_url"
-                          name="logo_url"
-                          defaultValue={websiteSettings?.logo_url || ""}
-                          placeholder="URL logo"
-                        />
-                        <Button type="button" variant="outline" size="icon">
-                          <ImageIcon className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <Label htmlFor="logo_url">URL Logo (Opsional)</Label>
+                      <Input
+                        id="logo_url"
+                        name="logo_url"
+                        defaultValue={websiteSettings?.logo_url || ""}
+                        placeholder="https://example.com/logo.png"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="theme_color">Warna Tema</Label>
@@ -1023,11 +1008,22 @@ export default function WebsiteManagement() {
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">Logo Desa</h3>
                     <div className="mt-1 border rounded p-2 inline-block">
-                      <img
-                        src={websiteSettings?.logo_url || "/placeholder.svg"}
-                        alt="Logo Desa"
-                        className="h-16 w-16 object-contain"
-                      />
+                      {websiteSettings?.logo_url && websiteSettings.logo_url !== "" ? (
+                        <img
+                          src={websiteSettings.logo_url || "/placeholder.svg"}
+                          alt="Logo Desa"
+                          className="h-16 w-16 object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.style.display = "none"
+                            target.nextElementSibling?.classList.remove("hidden")
+                          }}
+                        />
+                      ) : (
+                        <div className="h-16 w-16 bg-gray-100 rounded flex items-center justify-center">
+                          <Globe className="h-8 w-8 text-gray-400" />
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div>
@@ -1044,10 +1040,9 @@ export default function WebsiteManagement() {
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Preview Website</h3>
                   <div className="mt-2">
-                    <Button variant="outline">
-                      <Eye className="mr-2 h-4 w-4" />
-                      Lihat Preview Website
-                    </Button>
+                    <p className="text-xs text-gray-500 mb-2">
+                      Lihat preview website di tab "Preview" untuk melihat hasil perubahan.
+                    </p>
                   </div>
                 </div>
               </CardContent>
